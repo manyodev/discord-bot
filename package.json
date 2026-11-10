@@ -1,4 +1,8 @@
 {
+  "name": "skz-discord-bot",
+  "version": "1.0.0",
+  "description": "Stray Kids Tracker Bot",
+  "main": "bot.js",
   "scripts": {
     "start": "node bot.js"
   },

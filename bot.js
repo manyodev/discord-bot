@@ -1,3 +1,18 @@
+// Add this near the top of bot.js with your other requirements
+const http = require("http");
+
+// Create a basic web server so Render's port check passes
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Stray Kids Discord Bot is running!\n");
+});
+
+// Render automatically injects a PORT environment variable
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`🌍 Dummy web server listening on port ${PORT}`);
+});
+
 const fs = require("fs");
 const path = require("path");
 const CACHE_FILE = path.join(__dirname, "cache.json");
