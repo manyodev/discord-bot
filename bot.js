@@ -31,7 +31,7 @@ const client = new Client({
 // 3. TRACKING STATE & LOCAL CACHE LOADING
 let lastSeen = {
   youtube: null,
-  twitch: false,
+  youtubejpn: null,
   instagram: null,
   twitter: null,
 };
@@ -50,8 +50,9 @@ function saveCache() {
 }
 
 // 4. TARGET IDS FOR STRAY KIDS OFFICIAL ACCOUNTS
-const SKZ_YT_CHANNEL_ID = "UC9rMiEjNaCSseBSm1ZLN1mg";
-const SKZ_TWITCH_USER_ID = "your_skz_twitch_id_if_applicable";
+const SKZ_YT_CHANNEL_ID = "UC9rMiEjNaCSsebs31MRDCRA";
+const SKZ_YTJPN_CHANNEL_ID = "UCXhj2pPWvONXmvgHX5wllCA"
+
 
 // 5. DISCORD EVENTS
 client.once("ready", () => {
