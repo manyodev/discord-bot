@@ -1,33 +1,26 @@
-// Add this near the top of bot.js with your other requirements
+require("dotenv").config();
+const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
+const axios = require("axios");
+const Parser = require("rss-parser");
 const http = require("http");
 
-// Create a basic web server so Render's port check passes
+// 1. DUMMY WEB SERVER FIRST (Unblocks Render's network layer instantly)
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Stray Kids Discord Bot is running!\n");
 });
-
-// Render automatically injects a PORT environment variable
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`🌍 Dummy web server listening on port ${PORT}`);
 });
 
-const fs = require("fs");
-const path = require("path");
-const CACHE_FILE = path.join(__dirname, "cache.json");
-
-const Parser = require("rss-parser");
-const parser = new Parser(); // 👈 This must be lowercase 'parser' to match the loop code!
-require("dotenv").config();
-const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
-const axios = require("axios");
-
+// 2. DISCORD CLIENT INITIALIZATION
+const parser = new Parser();
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent, // 👈 This must be added here
+    GatewayIntentBits.MessageContent,
   ],
 });
 
@@ -84,7 +77,9 @@ async function checkSocialMedia() {
 
   try {
     if (!process.env.CHANNEL_ID) {
-      console.error("Error tracking social media: CHANNEL_ID is not configured.");
+      console.error(
+        "Error tracking social media: CHANNEL_ID is not configured.",
+      );
       return;
     }
 
@@ -97,7 +92,9 @@ async function checkSocialMedia() {
     }
 
     if (!process.env.YOUTUBE_API_KEY) {
-      console.error("Error tracking YouTube: YOUTUBE_API_KEY is not configured.");
+      console.error(
+        "Error tracking YouTube: YOUTUBE_API_KEY is not configured.",
+      );
     } else {
       try {
         const ytUrl = `https://www.googleapis.com/youtube/v3/search?key=${process.env.YOUTUBE_API_KEY}&channelId=${SKZ_YT_CHANNEL_ID}&part=snippet,id&order=date&maxResults=1`;
