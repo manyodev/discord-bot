@@ -160,7 +160,22 @@ async function checkSocialMedia() {
 }
 
 // 7. SECURE ENVIRONMENT ASSIGNMENT & LOGIN
+// Replace the very bottom login section with this debugging configuration
 console.log("🔑 Initializing Discord login routine...");
+
+if (!process.env.DISCORD_TOKEN) {
+  console.error(
+    "❌ CRITICAL: process.env.DISCORD_TOKEN is completely missing from Render!",
+  );
+} else {
+  console.log(
+    `📡 Token detected. Length: ${process.env.DISCORD_TOKEN.length} characters.`,
+  );
+  console.log(
+    `📡 Token starts with: "${process.env.DISCORD_TOKEN.substring(0, 5)}..."`,
+  );
+}
+
 client
   .login(process.env.DISCORD_TOKEN)
   .then(() =>
