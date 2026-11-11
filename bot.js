@@ -1,6 +1,5 @@
 require("dotenv").config();
 const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
-const axios = require("axios");
 const Parser = require("rss-parser");
 const http = require("http");
 const fs = require("fs");
@@ -53,29 +52,9 @@ function saveCache() {
 const SKZ_YT_CHANNEL_ID = "UC9rMiEjNaCSsebs31MRDCRA";
 const SKZ_YTJPN_CHANNEL_ID = "UCXhj2pPWvONXmvgHX5wllCA";
 
-async function fetchLatestYouTubeVideo(channelId) {
-  if (!process.env.YOUTUBE_API_KEY) {
-    return null;
-  }
-
-  const url = new URL("https://www.googleapis.com/youtube/v3/search");
-  url.searchParams.set("key", process.env.YOUTUBE_API_KEY);
-  url.searchParams.set("channelId", channelId);
-  url.searchParams.set("part", "snippet,id");
-  url.searchParams.set("order", "date");
-  url.searchParams.set("maxResults", "1");
-  url.searchParams.set("type", "video");
-
-  const response = await axios.get(url.toString());
-  return response.data.items?.[0] || null;
-}
-
 // 5. DISCORD EVENTS
-client.once("ready", () => {
+client.once("clientReady", () => {
   console.log(`Logged in as ${client.user.tag}!`);
-  if (!process.env.YOUTUBE_API_KEY) {
-    console.warn("YouTube tracking is disabled: YOUTUBE_API_KEY is not configured.");
-  }
   if (!process.env.INSTAGRAM_RSS_URL) {
     console.warn("Instagram tracking is disabled: INSTAGRAM_RSS_URL is not configured.");
   }
@@ -137,22 +116,33 @@ async function checkSocialMedia() {
 
   for (const youtubeChannel of youtubeChannels) {
     await checkTracker(youtubeChannel.key, async () => {
-      const latestVideo = await fetchLatestYouTubeVideo(youtubeChannel.channelId);
-      if (!latestVideo || !latestVideo.id?.videoId) {
+      const feed = await parser.parseURL(
+        `https://www.youtube.com/feeds/videos.xml?channel_id=${youtubeChannel.channelId}`,
+      );
+      const latestVideo = feed.items?.[0];
+      if (!latestVideo) {
         return;
       }
 
-      const videoId = latestVideo.id.videoId;
+      const videoId =
+        latestVideo.id?.replace(/^yt:video:/, "") ||
+        (latestVideo.link
+          ? new URL(latestVideo.link).searchParams.get("v")
+          : null);
+      if (!videoId) {
+        return;
+      }
+
       const previousVideoId = lastSeen[youtubeChannel.key];
 
       if (previousVideoId && previousVideoId !== videoId) {
         const embed = new EmbedBuilder()
           .setTitle(youtubeChannel.label)
-          .setDescription(latestVideo.snippet.title)
+          .setDescription(latestVideo.title)
           .setURL(`https://www.youtube.com/watch?v=${videoId}`)
-          .setImage(latestVideo.snippet.thumbnails.high.url)
+          .setImage(`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
           .setColor("#FF0000")
-          .setTimestamp();
+          .setTimestamp(new Date(latestVideo.pubDate));
 
         await channel.send({ embeds: [embed] });
       }
