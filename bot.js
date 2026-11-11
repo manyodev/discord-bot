@@ -73,6 +73,15 @@ async function fetchLatestYouTubeVideo(channelId) {
 // 5. DISCORD EVENTS
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}!`);
+  if (!process.env.YOUTUBE_API_KEY) {
+    console.warn("YouTube tracking is disabled: YOUTUBE_API_KEY is not configured.");
+  }
+  if (!process.env.INSTAGRAM_RSS_URL) {
+    console.warn("Instagram tracking is disabled: INSTAGRAM_RSS_URL is not configured.");
+  }
+  if (!process.env.TWITTER_RSS_URL) {
+    console.warn("X / Twitter tracking is disabled: TWITTER_RSS_URL is not configured.");
+  }
 
   // Check for updates every 5 minutes
   setInterval(checkSocialMedia, 300000);
@@ -89,28 +98,48 @@ client.on("messageCreate", async (message) => {
 });
 
 // 6. CORE TRACKING LOGIC
-async function checkSocialMedia() {
+async function checkTracker(name, tracker) {
   try {
-    const channel = await client.channels.fetch(process.env.CHANNEL_ID);
-    if (!channel) return;
+    await tracker();
+  } catch (error) {
+    console.error(`Error checking ${name}:`, error.message);
+  }
+}
 
-    const youtubeChannels = [
-      {
-        key: "youtube",
-        channelId: SKZ_YT_CHANNEL_ID,
-        label: "🎬 New Stray Kids Video!",
-      },
-      {
-        key: "youtubejpn",
-        channelId: SKZ_YTJPN_CHANNEL_ID,
-        label: "🎬 New Stray Kids Japan Video!",
-      },
-    ];
+async function checkSocialMedia() {
+  let channel;
+  try {
+    if (!process.env.CHANNEL_ID) {
+      throw new Error("CHANNEL_ID is not configured");
+    }
 
-    for (const youtubeChannel of youtubeChannels) {
+    channel = await client.channels.fetch(process.env.CHANNEL_ID);
+    if (!channel) {
+      throw new Error("Configured Discord channel was not found");
+    }
+  } catch (error) {
+    console.error("Unable to access the configured Discord channel:", error.message);
+    return;
+  }
+
+  const youtubeChannels = [
+    {
+      key: "youtube",
+      channelId: SKZ_YT_CHANNEL_ID,
+      label: "🎬 New Stray Kids Video!",
+    },
+    {
+      key: "youtubejpn",
+      channelId: SKZ_YTJPN_CHANNEL_ID,
+      label: "🎬 New Stray Kids Japan Video!",
+    },
+  ];
+
+  for (const youtubeChannel of youtubeChannels) {
+    await checkTracker(youtubeChannel.key, async () => {
       const latestVideo = await fetchLatestYouTubeVideo(youtubeChannel.channelId);
       if (!latestVideo || !latestVideo.id?.videoId) {
-        continue;
+        return;
       }
 
       const videoId = latestVideo.id.videoId;
@@ -130,10 +159,11 @@ async function checkSocialMedia() {
 
       lastSeen[youtubeChannel.key] = videoId;
       saveCache();
-    }
+    });
+  }
 
-    // Instagram Tracking (RSS)
-    if (process.env.INSTAGRAM_RSS_URL) {
+  if (process.env.INSTAGRAM_RSS_URL) {
+    await checkTracker("Instagram", async () => {
       const feed = await parser.parseURL(process.env.INSTAGRAM_RSS_URL);
       const latestPost = feed.items?.[0];
 
@@ -159,10 +189,11 @@ async function checkSocialMedia() {
         lastSeen.instagram = postId;
         saveCache();
       }
-    }
+    });
+  }
 
-    // X / Twitter Tracking (RSS)
-    if (process.env.TWITTER_RSS_URL) {
+  if (process.env.TWITTER_RSS_URL) {
+    await checkTracker("X / Twitter", async () => {
       const feed = await parser.parseURL(process.env.TWITTER_RSS_URL);
       const latestTweet = feed.items?.[0];
 
@@ -184,9 +215,7 @@ async function checkSocialMedia() {
         lastSeen.twitter = tweetId;
         saveCache();
       }
-    }
-  } catch (error) {
-    console.error("Error handling social media loop:", error.message);
+    });
   }
 }
 
