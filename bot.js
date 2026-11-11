@@ -3,26 +3,23 @@ const { Client, GatewayIntentBits, EmbedBuilder } = require("discord.js");
 const axios = require("axios");
 const Parser = require("rss-parser");
 const http = require("http");
+const fs = require("fs"); // 👈 Add this line
+const path = require("path"); // 👈 Add this line
 
-// 1. DUMMY WEB SERVER FIRST (Unblocks Render's network layer instantly)
+// Ensure CACHE_FILE path is declared before it gets checked lower down
+const CACHE_FILE = path.join(__dirname, "cache.json");
+
+// 1. DUMMY WEB SERVER FIRST
 const server = http.createServer((req, res) => {
   res.writeHead(200, { "Content-Type": "text/plain" });
   res.end("Stray Kids Discord Bot is running!\n");
 });
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render's standard web port
 server.listen(PORT, () => {
   console.log(`🌍 Dummy web server listening on port ${PORT}`);
 });
 
-// 2. DISCORD CLIENT INITIALIZATION
-const parser = new Parser();
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-});
+// ... rest of your code (`let lastSeen`, `if (fs.existsSync(CACHE_FILE))`, client.login(), etc.)
 
 let lastSeenYouTubeVideoId = null;
 let lastSeenJPNYouTubeVideoId = null;
