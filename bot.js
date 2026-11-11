@@ -51,8 +51,24 @@ function saveCache() {
 
 // 4. TARGET IDS FOR STRAY KIDS OFFICIAL ACCOUNTS
 const SKZ_YT_CHANNEL_ID = "UC9rMiEjNaCSsebs31MRDCRA";
-const SKZ_YTJPN_CHANNEL_ID = "UCXhj2pPWvONXmvgHX5wllCA"
+const SKZ_YTJPN_CHANNEL_ID = "UCXhj2pPWvONXmvgHX5wllCA";
 
+async function fetchLatestYouTubeVideo(channelId) {
+  if (!process.env.YOUTUBE_API_KEY) {
+    return null;
+  }
+
+  const url = new URL("https://www.googleapis.com/youtube/v3/search");
+  url.searchParams.set("key", process.env.YOUTUBE_API_KEY);
+  url.searchParams.set("channelId", channelId);
+  url.searchParams.set("part", "snippet,id");
+  url.searchParams.set("order", "date");
+  url.searchParams.set("maxResults", "1");
+  url.searchParams.set("type", "video");
+
+  const response = await axios.get(url.toString());
+  return response.data.items?.[0] || null;
+}
 
 // 5. DISCORD EVENTS
 client.once("ready", () => {
@@ -78,28 +94,42 @@ async function checkSocialMedia() {
     const channel = await client.channels.fetch(process.env.CHANNEL_ID);
     if (!channel) return;
 
-    // YouTube Tracking
-    if (process.env.YOUTUBE_API_KEY) {
-      const ytUrl = `https://googleapis.com{process.env.YOUTUBE_API_KEY}&channelId=${SKZ_YT_CHANNEL_ID}&part=snippet,id&order=date&maxResults=1`;
-      const ytResponse = await axios.get(ytUrl);
-      const latestVideo = ytResponse.data.items?.[0];
+    const youtubeChannels = [
+      {
+        key: "youtube",
+        channelId: SKZ_YT_CHANNEL_ID,
+        label: "🎬 New Stray Kids Video!",
+      },
+      {
+        key: "youtubejpn",
+        channelId: SKZ_YTJPN_CHANNEL_ID,
+        label: "🎬 New Stray Kids Japan Video!",
+      },
+    ];
 
-      if (latestVideo && latestVideo.id?.videoId) {
-        const videoId = latestVideo.id.videoId;
-        if (lastSeen.youtube && lastSeen.youtube !== videoId) {
-          const embed = new EmbedBuilder()
-            .setTitle(`🎬 New Stray Kids Video!`)
-            .setDescription(latestVideo.snippet.title)
-            .setURL(`https://youtube.com{videoId}`)
-            .setImage(latestVideo.snippet.thumbnails.high.url)
-            .setColor("#FF0000")
-            .setTimestamp();
-
-          await channel.send({ embeds: [embed] });
-        }
-        lastSeen.youtube = videoId;
-        saveCache();
+    for (const youtubeChannel of youtubeChannels) {
+      const latestVideo = await fetchLatestYouTubeVideo(youtubeChannel.channelId);
+      if (!latestVideo || !latestVideo.id?.videoId) {
+        continue;
       }
+
+      const videoId = latestVideo.id.videoId;
+      const previousVideoId = lastSeen[youtubeChannel.key];
+
+      if (previousVideoId && previousVideoId !== videoId) {
+        const embed = new EmbedBuilder()
+          .setTitle(youtubeChannel.label)
+          .setDescription(latestVideo.snippet.title)
+          .setURL(`https://www.youtube.com/watch?v=${videoId}`)
+          .setImage(latestVideo.snippet.thumbnails.high.url)
+          .setColor("#FF0000")
+          .setTimestamp();
+
+        await channel.send({ embeds: [embed] });
+      }
+
+      lastSeen[youtubeChannel.key] = videoId;
+      saveCache();
     }
 
     // Instagram Tracking (RSS)
